@@ -382,14 +382,17 @@ def render_painel_desossa(chave_desossa: str, part_base: str = "rendimento"):
                 help="Informe o peso total ou múltiplos lotes separados por espaço ou +"
             )
         with c2:
-            novo_custo_kg = st.number_input(
+            custo_atual_peca = float(dados_peca.get("custo_kg", 0.0) or 0.0)
+            novo_custo_kg_in = st.number_input(
                 "💵 Custo de Aquisição / KG (R$):",
                 min_value=0.0,
-                value=float(dados_peca.get("custo_kg", 0.0)),
-                step=0.10,
+                value=custo_atual_peca if custo_atual_peca > 0 else None,
+                step=0.01,
                 format="%.2f",
+                placeholder="Ex: 38,93",
                 key=f"custo_kg_{chave_desossa}"
             )
+            novo_custo_kg = float(novo_custo_kg_in or 0.0)
         with c3:
             nova_perda_str = st.text_input(
                 "🦴 Descarte / Limpeza Apontada (KG):",
@@ -555,7 +558,7 @@ def render_painel_desossa(chave_desossa: str, part_base: str = "rendimento"):
             "peso_kg": st.column_config.NumberColumn("Peso Acumulado (KG)", disabled=True, format="%.3f"),
             "part_pct": st.column_config.NumberColumn("Participação (%)", disabled=True, format="%.2f%%"),
             "custo_kg": st.column_config.NumberColumn("Custo Apurado / KG", disabled=True, format="R$ %.2f"),
-            "preco_venda": st.column_config.NumberColumn("✍️ Preço Venda / KG", format="%.2f", step=0.50),
+            "preco_venda": st.column_config.NumberColumn("✍️ Preço Venda / KG", format="%.2f", step=0.01),
             "venda_total": st.column_config.NumberColumn("Receita Total (R$)", disabled=True, format="R$ %.2f"),
         }
     )
@@ -725,7 +728,7 @@ if aba_selecionada == "🥩 Rendimento & Desossa":
                     "preco_medio_final": st.column_config.NumberColumn("🎯 Custo Médio Final (R$)", disabled=True, format="R$ %.2f", help="Custo médio ponderado entre a Desossa do Boi Casado e os Lotes Adicionais (Masterboi / Caixas)"),
                     "pesagens_col_o": st.column_config.TextColumn("✍️ Lotes Adicionais (KG)", width="medium", help="Para cortes de Traseiro, informe o peso ou soma de caixas extras (ex: 200 + 150)"),
                     "peso_masterboi": st.column_config.NumberColumn("Peso Adicional Total (KG)", disabled=True, format="%.3f"),
-                    "custo_masterboi": st.column_config.NumberColumn("✍️ Custo Adicional (R$)", format="%.2f", step=0.10),
+                    "custo_masterboi": st.column_config.NumberColumn("✍️ Custo Adicional (R$)", format="%.2f", step=0.01),
                     "origem_mb": st.column_config.TextColumn("Fonte Lote Adicional", disabled=True, width="medium"),
                 }
             )
@@ -845,14 +848,17 @@ if aba_selecionada == "🥩 Rendimento & Desossa":
                     help="Informe as pesagens do produto acabado separadas por espaço ou +"
                 )
             with c_r2:
-                novo_pv_rec = st.number_input(
+                pv_rec_atual = float(dados_rec.get("preco_venda", 0.0) or 0.0)
+                novo_pv_rec_in = st.number_input(
                     "💵 Preço de Venda / KG (R$):",
                     min_value=0.0,
-                    value=float(dados_rec.get("preco_venda", 0.0)),
-                    step=0.50,
+                    value=pv_rec_atual if pv_rec_atual > 0 else None,
+                    step=0.01,
                     format="%.2f",
+                    placeholder="Ex: 38,93",
                     key=f"pv_rec_{chave_rec_atual}"
                 )
+                novo_pv_rec = float(novo_pv_rec_in or 0.0)
             with c_r3:
                 if st.button("💾 Enviar p/ Nota Fiscal", key=f"nf_rec_{chave_rec_atual}", type="primary", use_container_width=True):
                     if calc_r["rendimento_final"] > 0 and calc_r["custo_un_produzido"] > 0:
@@ -952,7 +958,7 @@ if aba_selecionada == "🥩 Rendimento & Desossa":
                 "pesagens": st.column_config.TextColumn("✍️ Pesagens Utilizadas (KG)", width="large"),
                 "qtd_pesos": st.column_config.NumberColumn("Lotes", disabled=True, width="small"),
                 "peso_kg": st.column_config.NumberColumn("Peso Total (KG)", disabled=True, format="%.3f"),
-                "custo_kg": st.column_config.NumberColumn("✍️ Custo Unitário (R$)", format="%.2f", step=0.10),
+                "custo_kg": st.column_config.NumberColumn("✍️ Custo Unitário (R$)", format="%.2f", step=0.01),
                 "custo_total": st.column_config.NumberColumn("Custo Total (R$)", disabled=True, format="R$ %.2f"),
                 "part_pct": st.column_config.NumberColumn("Participação (%)", disabled=True, format="%.2f%%"),
             }
@@ -1176,7 +1182,8 @@ elif aba_selecionada == "📦 Gestão de Caixaria":
             with c_inc2:
                 onde_inc = st.selectbox("Disponibilizar em:", options=["Todas as Listas (Saída, Entrada e Perda)", "Saídas e Perdas", "Somente Entradas"], key="onde_add_cx")
             with c_inc3:
-                custo_inc_man = st.number_input("Custo Unitário (R$/KG):", min_value=0.0, value=0.0, step=0.50, format="%.2f", help="Se mantido em 0,00, utiliza o custo já cadastrado no catálogo")
+                custo_inc_man_in = st.number_input("Custo Unitário (R$/KG):", min_value=0.0, value=None, step=0.01, format="%.2f", placeholder="Ex: 38,93", help="Deixe em branco para utilizar o custo já cadastrado no catálogo")
+                custo_inc_man = float(custo_inc_man_in or 0.0)
             with c_inc4:
                 if st.button("➕ Habilitar Produto", type="primary", use_container_width=True):
                     cod_inc = int(sel_novo_cx.split(" - ")[0])
@@ -1264,7 +1271,8 @@ elif aba_selecionada == "📦 Gestão de Caixaria":
             with cu3:
                 val_cx_unif = st.text_input("⚖️ 3. Peso(s) (KG) [Enter]:", placeholder="Ex: 1,496 2,29")
             with cu4:
-                custo_man_unif = st.number_input("💵 4. Custo Manual (Opcional):", min_value=0.0, value=0.0, step=0.50, format="%.2f", help="Deixe 0,00 para manter o custo cadastrado, ou informe um novo valor para atualizar o custo deste corte.")
+                custo_man_unif_in = st.number_input("💵 4. Custo Manual (Opcional):", min_value=0.0, value=None, step=0.01, format="%.2f", placeholder="Ex: 38,93", help="Deixe em branco para manter o custo cadastrado, ou informe um novo valor para atualizar o custo deste corte.")
+                custo_man_unif = float(custo_man_unif_in or 0.0)
             with cu5:
                 sub_cx_unif = st.form_submit_button("⚡ Registrar Conversão", type="primary", use_container_width=True)
 
@@ -1316,7 +1324,7 @@ elif aba_selecionada == "📦 Gestão de Caixaria":
                     "pesagens_saida": st.column_config.TextColumn("✍️ Pesagens de Saída", width="medium"),
                     "qtd_pesagens": st.column_config.NumberColumn("Lotes", disabled=True, width="small"),
                     "peso_kg": st.column_config.NumberColumn("Peso Total (KG)", disabled=True, format="%.3f"),
-                    "custo_kg": st.column_config.NumberColumn("✍️ Custo Unit. (R$)", format="%.2f", step=0.10, help="Edite o custo manualmente se desejar; a alteração será sincronizada com o Catálogo."),
+                    "custo_kg": st.column_config.NumberColumn("✍️ Custo Unit. (R$)", format="%.2f", step=0.01, help="Edite o custo manualmente se desejar; a alteração será sincronizada com o Catálogo."),
                     "total_rs": st.column_config.NumberColumn("Custo Total (R$)", disabled=True, format="R$ %.2f"),
                 }
             )
@@ -1381,7 +1389,8 @@ elif aba_selecionada == "📦 Gestão de Caixaria":
             with cp2:
                 val_cx_p = st.text_input("⚖️ 2. Peso(s) de Perda (KG) [Enter]:", placeholder="Ex: 0,694 0,940")
             with cp3:
-                custo_man_p = st.number_input("💵 3. Custo Manual (Opcional):", min_value=0.0, value=0.0, step=0.50, format="%.2f")
+                custo_man_p_in = st.number_input("💵 3. Custo Manual (Opcional):", min_value=0.0, value=None, step=0.01, format="%.2f", placeholder="Ex: 38,93")
+                custo_man_p = float(custo_man_p_in or 0.0)
             with cp4:
                 sub_cx_p = st.form_submit_button("➕ Registrar Perda", type="primary", use_container_width=True)
             if sub_cx_p:
@@ -1421,7 +1430,7 @@ elif aba_selecionada == "📦 Gestão de Caixaria":
                 "pesagens_perda": st.column_config.TextColumn("✍️ Registro de Pesagens Descartadas (KG)", width="large"),
                 "qtd_pesagens": st.column_config.NumberColumn("Lotes", disabled=True, width="small"),
                 "peso_kg": st.column_config.NumberColumn("Peso Descartado (KG)", disabled=True, format="%.3f"),
-                "custo_kg": st.column_config.NumberColumn("✍️ Custo Unitário (R$)", format="%.2f", step=0.10),
+                "custo_kg": st.column_config.NumberColumn("✍️ Custo Unitário (R$)", format="%.2f", step=0.01),
                 "total_rs": st.column_config.NumberColumn("Valor da Perda (R$)", disabled=True, format="R$ %.2f"),
             }
         )
@@ -1470,8 +1479,8 @@ elif aba_selecionada == "🧮 Calculadora de Preço Médio":
                 {
                     "uid": 1,
                     "produto_id": primeiro_id,
-                    "quantidade": 10.0,
-                    "custo_unitario": 20.0,
+                    "quantidade": 0.0,
+                    "custo_unitario": 0.0,
                     "fator": produtos_dict[primeiro_id]["fator"]
                 }
             ]
@@ -1521,24 +1530,30 @@ elif aba_selecionada == "🧮 Calculadora de Preço Médio":
                     fmt_qtd = "%.3f" if is_peso else "%.2f"
 
                     with col_qtd:
-                        item["quantidade"] = st.number_input(
+                        qtd_atual = float(item.get("quantidade", 0.0) or 0.0)
+                        qtd_in = st.number_input(
                             f"Quantidade ({unidade}):",
                             min_value=0.0,
-                            value=float(item.get("quantidade", 0.0)),
+                            value=qtd_atual if qtd_atual > 0 else None,
                             step=step_qtd,
                             format=fmt_qtd,
+                            placeholder="Ex: 10,000" if is_peso else "Ex: 10,00",
                             key=f"qtd_{uid}"
                         )
+                        item["quantidade"] = float(qtd_in or 0.0)
 
                     with col_custo:
-                        item["custo_unitario"] = st.number_input(
+                        custo_atual = float(item.get("custo_unitario", 0.0) or 0.0)
+                        custo_in = st.number_input(
                             "Custo Unitário (R$):",
                             min_value=0.0,
-                            value=float(item.get("custo_unitario", 0.0)),
-                            step=0.50,
+                            value=custo_atual if custo_atual > 0 else None,
+                            step=0.01,
                             format="%.2f",
+                            placeholder="Ex: 38,93",
                             key=f"custo_{uid}"
                         )
+                        item["custo_unitario"] = float(custo_in or 0.0)
 
                     with col_fator:
                         item["fator"] = st.number_input(
@@ -1717,7 +1732,7 @@ elif aba_selecionada == "📋 Catálogo de Produtos & Custos":
                 "descricao": st.column_config.TextColumn("Descrição do Produto / Corte", width="large"),
                 "unidade": st.column_config.SelectboxColumn("Unidade", options=["UN", "KG", "L", "CX", "PCT", "G"], width="small"),
                 "fator_conversao": st.column_config.NumberColumn("Fator de Rendimento", step=0.005, format="%.4f"),
-                "custo_padrao": st.column_config.NumberColumn("✍️ Custo Unitário Padrão (R$)", step=0.10, format="R$ %.2f", help="Custo unitário de referência utilizado na Gestão de Caixaria"),
+                "custo_padrao": st.column_config.NumberColumn("✍️ Custo Unitário Padrão (R$)", step=0.01, format="R$ %.2f", help="Custo unitário de referência utilizado na Gestão de Caixaria"),
             },
             hide_index=True
         )
@@ -1781,14 +1796,16 @@ elif aba_selecionada == "📋 Catálogo de Produtos & Custos":
                     help="Multiplicador técnico de rendimento (utilize 1.0000 quando não houver fator específico)"
                 )
             with col_custo_n:
-                novo_custo_pad = st.number_input(
+                novo_custo_pad_in = st.number_input(
                     "Custo Unitário Padrão (R$):",
                     min_value=0.0,
-                    value=0.0,
-                    step=0.50,
+                    value=None,
+                    step=0.01,
                     format="%.2f",
+                    placeholder="Ex: 38,93",
                     help="Custo unitário de referência utilizado nas operações de Caixaria"
                 )
+                novo_custo_pad = float(novo_custo_pad_in or 0.0)
 
             btn_cadastrar = st.form_submit_button("Cadastrar no Catálogo", type="primary")
 
