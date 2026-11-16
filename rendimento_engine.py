@@ -35,8 +35,10 @@ def parse_pesagens(texto) -> tuple[float, int, list[float], str]:
     if s.startswith("="):
         s = s[1:].strip()
 
-    # Substitui vírgula decimal por ponto quando estiver entre dígitos
+    # Substitui vírgula decimal por ponto quando estiver entre dígitos (ex: 12,67 -> 12.67)
     s_clean = re.sub(r"(\d),(\d)", r"\1.\2", s)
+    # Suporta digitação rápida de decimais sem o zero à esquerda (ex: ,874 ou .874 -> 0.874)
+    s_clean = re.sub(r"(?<!\d)[,.](\d)", r"0.\1", s_clean)
     # Divide por +, espaço, ponto-e-vírgula, barra ou quebra de linha
     tokens = re.split(r"[+\s;/\n\r\t]+", s_clean)
     pesos = []
@@ -46,7 +48,7 @@ def parse_pesagens(texto) -> tuple[float, int, list[float], str]:
             continue
         try:
             v = float(tok)
-            if v != 0:
+            if v > 0:
                 pesos.append(round(v, 3))
         except ValueError:
             pass
@@ -54,6 +56,30 @@ def parse_pesagens(texto) -> tuple[float, int, list[float], str]:
     total = round(sum(pesos), 3)
     norm_str = " + ".join(f"{p:g}" for p in pesos)
     return total, len(pesos), pesos, norm_str
+
+
+def tem_token_invalido_pesagem(texto) -> bool:
+    """Retorna True se o usuário digitou algo no campo de peso que não é um número válido (> 0)."""
+    if texto is None:
+        return False
+    s = str(texto).strip()
+    if not s:
+        return False
+    if s.startswith("="):
+        s = s[1:].strip()
+    s_clean = re.sub(r"(\d),(\d)", r"\1.\2", s)
+    s_clean = re.sub(r"(?<!\d)[,.](\d)", r"0.\1", s_clean)
+    tokens = [t.strip() for t in re.split(r"[+\s;/\n\r\t]+", s_clean) if t.strip()]
+    if not tokens:
+        return True
+    for tok in tokens:
+        try:
+            v = float(tok)
+            if v <= 0:
+                return True
+        except ValueError:
+            return True
+    return False
 
 
 def append_pesagem(texto_atual: str, novo_peso) -> str:

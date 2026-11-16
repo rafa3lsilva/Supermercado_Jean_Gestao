@@ -362,8 +362,23 @@ with st.sidebar:
 
 
 # ==============================================================================
-# FUNÇÃO AUXILIAR PARA RENDERIZAR UM PAINEL DE DESOSSA TÉCNICA
+# FUNÇÕES AUXILIARES DE FEEDBACK ABAIXO DOS FORMULÁRIOS E PAINEL DE DESOSSA
 # ==============================================================================
+def set_feedback_abaixo(chave: str, tipo: str, msg: str):
+    st.session_state[f"_fb_{chave}"] = {"tipo": tipo, "msg": msg}
+
+
+def render_feedback_abaixo(chave: str):
+    fb = st.session_state.pop(f"_fb_{chave}", None)
+    if fb:
+        if fb["tipo"] == "success":
+            st.success(fb["msg"])
+        elif fb["tipo"] == "error":
+            st.error(fb["msg"])
+        else:
+            st.warning(fb["msg"])
+
+
 def render_painel_desossa(chave_desossa: str, part_base: str = "rendimento"):
     state = st.session_state.rend_state
     dados_peca = state["desossas"][chave_desossa]
@@ -507,23 +522,34 @@ def render_painel_desossa(chave_desossa: str, part_base: str = "rendimento"):
             submitted_bip = st.form_submit_button("➕ Registrar Peso", type="primary", use_container_width=True)
 
         if submitted_bip:
-            soma_bip, qtd_bip, _, _ = reng.parse_pesagens(peso_bip_str)
-            if soma_bip <= 0:
-                st.warning("Informe ao menos um peso válido maior que zero.")
+            texto_bip = str(peso_bip_str or "").strip()
+            soma_bip, qtd_bip, _, _ = reng.parse_pesagens(texto_bip)
+            if not texto_bip or reng.tem_token_invalido_pesagem(texto_bip) or soma_bip <= 0:
+                set_feedback_abaixo(
+                    f"bip_{chave_desossa}",
+                    "error",
+                    f"❌ Peso inválido ({texto_bip or 'vazio'}). Digite valores numéricos maiores que zero (ex: 12,450 ou ,874)."
+                )
             else:
                 if corte_bip.startswith("🦴"):
                     dados_peca["perda_apontada_str"] = reng.append_pesagem(
-                        dados_peca.get("perda_apontada_str", ""), peso_bip_str
+                        dados_peca.get("perda_apontada_str", ""), texto_bip
                     )
                 else:
                     cod_alvo = int(corte_bip.split(" - ")[0])
                     for c in dados_peca["cortes"]:
                         if int(c["codigo"]) == cod_alvo:
-                            c["pesagens"] = reng.append_pesagem(c.get("pesagens", ""), peso_bip_str)
+                            c["pesagens"] = reng.append_pesagem(c.get("pesagens", ""), texto_bip)
                             break
                 salvar_estado_rendimento()
-                st.toast(f"✅ +{soma_bip:.3f} kg ({qtd_bip} pesagem/ns) registrado em {corte_bip}!", icon="⚖️")
+                set_feedback_abaixo(
+                    f"bip_{chave_desossa}",
+                    "success",
+                    f"✅ +{soma_bip:.3f} kg ({qtd_bip} pesagem/ns) registrado com sucesso em {corte_bip}!"
+                )
                 st.rerun()
+
+    render_feedback_abaixo(f"bip_{chave_desossa}")
 
     # 4. Tabela Profissional de Cortes com Soma Automática
     df_grid = pd.DataFrame([
@@ -1028,18 +1054,29 @@ if aba_selecionada == "🥩 Rendimento & Desossa":
                 sub_anot = st.form_submit_button("➕ Registrar Peso", type="primary", use_container_width=True)
 
             if sub_anot:
-                soma_a, qtd_a, _, _ = reng.parse_pesagens(val_anot_str)
-                if soma_a > 0:
+                texto_anot = str(val_anot_str or "").strip()
+                soma_a, qtd_a, _, _ = reng.parse_pesagens(texto_anot)
+                if not texto_anot or reng.tem_token_invalido_pesagem(texto_anot) or soma_a <= 0:
+                    set_feedback_abaixo(
+                        "bip_anot",
+                        "error",
+                        f"❌ Peso inválido ({texto_anot or 'vazio'}). Informe um peso válido maior que zero (ex: 5,400 ou ,874)."
+                    )
+                else:
                     cod_sel = int(sel_anot.split(" - ")[0])
                     for a in lista_anot:
                         if int(a["codigo"]) == cod_sel:
-                            a["pesagens"] = reng.append_pesagem(a.get("pesagens", ""), val_anot_str)
+                            a["pesagens"] = reng.append_pesagem(a.get("pesagens", ""), texto_anot)
                             break
                     salvar_estado_rendimento()
-                    st.toast(f"✅ +{soma_a:.3f} kg ({qtd_a} pesagem/ns) registrado em {sel_anot}!", icon="📝")
+                    set_feedback_abaixo(
+                        "bip_anot",
+                        "success",
+                        f"✅ +{soma_a:.3f} kg ({qtd_a} pesagem/ns) registrado com sucesso em {sel_anot}!"
+                    )
                     st.rerun()
-                else:
-                    st.warning("Informe um peso válido maior que zero.")
+
+        render_feedback_abaixo("bip_anot")
 
         ak1, ak2, ak3 = st.columns(3)
         with ak1:
@@ -1277,35 +1314,64 @@ elif aba_selecionada == "📦 Gestão de Caixaria":
                 sub_cx_unif = st.form_submit_button("⚡ Registrar Conversão", type="primary", use_container_width=True)
 
             if sub_cx_unif:
-                soma_v, qtd_v, _, _ = reng.parse_pesagens(val_cx_unif)
+                texto_peso_unif = str(val_cx_unif or "").strip()
+                peso_invalido = reng.tem_token_invalido_pesagem(texto_peso_unif)
+                soma_v, qtd_v, _, _ = reng.parse_pesagens(texto_peso_unif)
                 cod_s = int(sel_cx_s.split(" - ")[0])
                 cod_e = int(sel_cx_e.split(" - ")[0])
 
-                if custo_man_unif > 0:
+                if texto_peso_unif and (peso_invalido or soma_v <= 0):
+                    set_feedback_abaixo(
+                        "cx_unif",
+                        "error",
+                        f"❌ O peso informado ('{texto_peso_unif}') é inválido. Digite valores válidos maiores que zero (ex: 1,496 ou ,874). Nenhum peso ou custo foi alterado."
+                    )
+                elif soma_v > 0:
+                    msg_custo_extra = ""
+                    if custo_man_unif > 0:
+                        for item_p in dados_cx["perdas_custos"]:
+                            if int(item_p["codigo"]) == cod_s:
+                                item_p["custo_kg"] = float(custo_man_unif)
+                                break
+                        data_manager.update_custo_padrao_por_codigo(cod_s, float(custo_man_unif))
+                        msg_custo_extra = f" | 💵 Custo atualizado para R$ {custo_man_unif:.2f}/kg"
+
+                    for item in dados_cx["saidas"]:
+                        if int(item["codigo"]) == cod_s:
+                            item["pesagens_saida"] = reng.append_pesagem(item.get("pesagens_saida", ""), texto_peso_unif)
+                            break
+                    for item in dados_cx["entradas"]:
+                        if int(item["codigo"]) == cod_e:
+                            item["pesagens_entrada"] = reng.append_pesagem(item.get("pesagens_entrada", ""), texto_peso_unif)
+                            break
+                    salvar_estado_rendimento()
+                    set_feedback_abaixo(
+                        "cx_unif",
+                        "success",
+                        f"✅ +{soma_v:.3f} kg ({qtd_v} pesagem/ns) registrado: {sel_cx_s} ➔ {sel_cx_e}{msg_custo_extra}!"
+                    )
+                    st.rerun()
+                elif custo_man_unif > 0:
                     for item_p in dados_cx["perdas_custos"]:
                         if int(item_p["codigo"]) == cod_s:
                             item_p["custo_kg"] = float(custo_man_unif)
                             break
                     data_manager.update_custo_padrao_por_codigo(cod_s, float(custo_man_unif))
-
-                if soma_v > 0:
-                    for item in dados_cx["saidas"]:
-                        if int(item["codigo"]) == cod_s:
-                            item["pesagens_saida"] = reng.append_pesagem(item.get("pesagens_saida", ""), val_cx_unif)
-                            break
-                    for item in dados_cx["entradas"]:
-                        if int(item["codigo"]) == cod_e:
-                            item["pesagens_entrada"] = reng.append_pesagem(item.get("pesagens_entrada", ""), val_cx_unif)
-                            break
                     salvar_estado_rendimento()
-                    st.toast(f"✅ +{soma_v:.3f} kg registrado: {sel_cx_s} ➔ {sel_cx_e}!", icon="⚡")
-                    st.rerun()
-                elif custo_man_unif > 0:
-                    salvar_estado_rendimento()
-                    st.toast(f"✅ Custo unitário de R$ {custo_man_unif:.2f} atualizado no catálogo!", icon="💵")
+                    set_feedback_abaixo(
+                        "cx_unif",
+                        "success",
+                        f"✅ Custo unitário de {sel_cx_s} atualizado para R$ {custo_man_unif:.2f}/kg no catálogo! (Nenhum peso informado)"
+                    )
                     st.rerun()
                 else:
-                    st.warning("Informe um peso ou custo manual maior que zero.")
+                    set_feedback_abaixo(
+                        "cx_unif",
+                        "warning",
+                        "⚠️ Informe um peso válido (ex: 1,496 ou ,874) ou um custo manual maior que zero."
+                    )
+
+        render_feedback_abaixo("cx_unif")
 
         col_tab_s, col_tab_e = st.columns(2, gap="medium")
 
@@ -1394,28 +1460,59 @@ elif aba_selecionada == "📦 Gestão de Caixaria":
             with cp4:
                 sub_cx_p = st.form_submit_button("➕ Registrar Perda", type="primary", use_container_width=True)
             if sub_cx_p:
-                soma_v, qtd_v, _, _ = reng.parse_pesagens(val_cx_p)
+                texto_peso_p = str(val_cx_p or "").strip()
+                peso_p_invalido = reng.tem_token_invalido_pesagem(texto_peso_p)
+                soma_v, qtd_v, _, _ = reng.parse_pesagens(texto_peso_p)
                 cod_alvo = int(sel_cx_p.split(" - ")[0])
-                if custo_man_p > 0:
+
+                if texto_peso_p and (peso_p_invalido or soma_v <= 0):
+                    set_feedback_abaixo(
+                        "cx_perdas",
+                        "error",
+                        f"❌ O peso informado ('{texto_peso_p}') é inválido. Digite valores válidos maiores que zero (ex: 0,694 ou ,874). Nenhum lançamento foi realizado."
+                    )
+                elif soma_v > 0:
+                    msg_custo_p = ""
+                    if custo_man_p > 0:
+                        for item in dados_cx["perdas_custos"]:
+                            if int(item["codigo"]) == cod_alvo:
+                                item["custo_kg"] = float(custo_man_p)
+                                break
+                        data_manager.update_custo_padrao_por_codigo(cod_alvo, float(custo_man_p))
+                        msg_custo_p = f" | 💵 Custo atualizado para R$ {custo_man_p:.2f}/kg"
+
+                    for item in dados_cx["perdas_custos"]:
+                        if int(item["codigo"]) == cod_alvo:
+                            item["pesagens_perda"] = reng.append_pesagem(item.get("pesagens_perda", ""), texto_peso_p)
+                            break
+                    salvar_estado_rendimento()
+                    set_feedback_abaixo(
+                        "cx_perdas",
+                        "success",
+                        f"✅ +{soma_v:.3f} kg ({qtd_v} pesagem/ns) registrado em Perdas ({sel_cx_p}){msg_custo_p}!"
+                    )
+                    st.rerun()
+                elif custo_man_p > 0:
                     for item in dados_cx["perdas_custos"]:
                         if int(item["codigo"]) == cod_alvo:
                             item["custo_kg"] = float(custo_man_p)
                             break
                     data_manager.update_custo_padrao_por_codigo(cod_alvo, float(custo_man_p))
-                if soma_v > 0:
-                    for item in dados_cx["perdas_custos"]:
-                        if int(item["codigo"]) == cod_alvo:
-                            item["pesagens_perda"] = reng.append_pesagem(item.get("pesagens_perda", ""), val_cx_p)
-                            break
                     salvar_estado_rendimento()
-                    st.toast(f"✅ +{soma_v:.3f} kg ({qtd_v} pesagem/ns) registrado em Perdas ({sel_cx_p})!", icon="🗑️")
-                    st.rerun()
-                elif custo_man_p > 0:
-                    salvar_estado_rendimento()
-                    st.toast(f"✅ Custo unitário de R$ {custo_man_p:.2f} atualizado!", icon="💵")
+                    set_feedback_abaixo(
+                        "cx_perdas",
+                        "success",
+                        f"✅ Custo unitário de {sel_cx_p} atualizado para R$ {custo_man_p:.2f}/kg! (Nenhum peso informado)"
+                    )
                     st.rerun()
                 else:
-                    st.warning("Informe um peso ou custo manual válido.")
+                    set_feedback_abaixo(
+                        "cx_perdas",
+                        "warning",
+                        "⚠️ Informe um peso válido (ex: 0,694 ou ,874) ou um custo manual maior que zero."
+                    )
+
+        render_feedback_abaixo("cx_perdas")
 
         df_p = pd.DataFrame(calc_cx["linhas_perdas"])
         ed_p = st.data_editor(
