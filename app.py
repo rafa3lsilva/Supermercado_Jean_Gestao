@@ -1170,7 +1170,7 @@ elif aba_selecionada == "📦 Gestão de Caixaria":
     with st.expander("➕ Adicionar Produto do Catálogo à Operação de Caixaria", expanded=False):
         if not produtos_df_cx.empty:
             c_inc1, c_inc2, c_inc3, c_inc4 = st.columns([4, 2, 2, 2], vertical_alignment="bottom")
-            opcoes_cad_cx = [f"{int(r['codigo'])} - {r['descricao']} (R$ {float(r.get('custo_padrao', 0.0)):.2f})" for _, r in produtos_df_cx.iterrows()]
+            opcoes_cad_cx = [f"{int(r['codigo'])} - {r['descricao']}" for _, r in produtos_df_cx.iterrows()]
             with c_inc1:
                 sel_novo_cx = st.selectbox("Produto do Catálogo:", options=opcoes_cad_cx, key="sel_add_prod_cx")
             with c_inc2:
@@ -1250,7 +1250,7 @@ elif aba_selecionada == "📦 Gestão de Caixaria":
 
     with tab_cx_unif:
         mapa_custo_atual = {int(x["codigo"]): float(x.get("custo_kg", 0.0)) for x in dados_cx["perdas_custos"]}
-        opcoes_cx_s = [f"{item['codigo']} - {item['corte']} (R$ {mapa_custo_atual.get(int(item['codigo']), 0.0):.2f})" for item in dados_cx["saidas"]]
+        opcoes_cx_s = [f"{item['codigo']} - {item['corte']}" for item in dados_cx["saidas"]]
         opcoes_cx_e = [f"{item['codigo']} - {item['corte']}" for item in dados_cx["entradas"]]
         idx_padrao_e = next((i for i, s in enumerate(opcoes_cx_e) if "6030" in s), 0)
 
@@ -1373,7 +1373,7 @@ elif aba_selecionada == "📦 Gestão de Caixaria":
                 st.rerun()
 
     with tab_cx_perdas:
-        opcoes_cx_p = [f"{item['codigo']} - {item['corte']} (R$ {float(item.get('custo_kg', 0.0)):.2f})" for item in dados_cx["perdas_custos"]]
+        opcoes_cx_p = [f"{item['codigo']} - {item['corte']}" for item in dados_cx["perdas_custos"]]
         with st.form("form_bip_cx_perdas", clear_on_submit=True, border=True):
             cp1, cp2, cp3, cp4 = st.columns([4, 3, 2, 2], vertical_alignment="bottom")
             with cp1:
